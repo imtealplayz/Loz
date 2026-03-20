@@ -47,44 +47,38 @@
 /* SPECIES REVEAL */
 .cd-species-reveal{margin-top:2.5rem;text-align:center;position:relative;}
 .cd-species-label{font-family:var(--font-mono);font-size:0.58rem;letter-spacing:0.3em;text-transform:uppercase;color:rgba(200,210,255,0.6);margin-bottom:0.75rem;opacity:0;}
-.cd-species-names{display:flex;align-items:center;justify-content:center;gap:1.2rem;flex-wrap:wrap;}
-.cd-sephian-wrap{
-  position:relative;display:inline-flex;align-items:baseline;
+.cd-names-container{
+  position:relative;display:inline-block;
+  padding:6px 18px 8px;
+}
+.cd-names-text{
   font-family:var(--font-display);font-size:clamp(1.4rem,4.5vw,2.8rem);font-weight:900;
-  letter-spacing:0.14em;text-transform:uppercase;color:#e8f0ff;
-  white-space:nowrap;
+  letter-spacing:0.14em;text-transform:uppercase;
+  white-space:nowrap;display:flex;align-items:baseline;gap:0.5rem;
 }
 .cd-sephian-s{
   color:#e8f0ff;
   text-shadow:0 0 30px rgba(220,235,255,0.9),0 0 10px rgba(220,235,255,0.5);
-  opacity:1;position:relative;z-index:2;
 }
-.cd-sephian-rest{
-  color:#e8f0ff;opacity:1;position:relative;z-index:1;
-}
-.cd-sephian-blur{
-  position:absolute;
-  /* covers "ephian" only — starts right after the S */
-  left:0.72em;right:0;top:-2px;bottom:-2px;
-  background:rgba(10,15,25,0.55);
-  backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
-  border-radius:3px;
-  z-index:3;
-  opacity:1;
-  transition:none;
-}
+.cd-sephian-rest{color:#e8f0ff;}
 .cd-species-sep{
   font-family:var(--font-display);font-size:clamp(1rem,3vw,2rem);font-weight:300;
-  color:rgba(200,200,200,0.6);opacity:0;
+  color:rgba(200,200,200,0.7);padding:0 4px;
 }
 .cd-species-archdemon{
-  font-family:var(--font-display);font-size:clamp(1.4rem,4.5vw,2.8rem);font-weight:900;
-  letter-spacing:0.14em;text-transform:uppercase;
-  color:#8b0000;text-shadow:0 0 50px rgba(139,0,0,0);
-  opacity:0;white-space:nowrap;
-  -webkit-mask-image:linear-gradient(to right,black 0%,transparent 8%);
-  mask-image:linear-gradient(to right,black 0%,transparent 8%);
+  color:#8b0000;
+  text-shadow:0 0 20px rgba(139,0,0,0.4);
+}
+/* The big blur box that sits on top of EVERYTHING and fades away */
+.cd-big-blur{
+  position:absolute;
+  inset:-4px;
+  background:rgba(5,8,16,0.92);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  border-radius:6px;
+  z-index:10;
+  opacity:1;
 }
 .cd-reveal-msg{display:none;margin-top:1.1rem;font-family:var(--font-display);font-size:clamp(1rem,2.5vw,1.5rem);font-weight:700;letter-spacing:0.06em;animation:revealPop 0.8s ease forwards;}
 .cd-reveal-msg .rs{color:#e8f0ff;text-shadow:0 0 20px rgba(200,225,255,0.9);}
@@ -872,13 +866,15 @@ nav{position:fixed;top:36px;left:0;right:0;z-index:200;height:60px;display:flex;
     </div>
     <div class="cd-species-reveal">
       <div class="cd-species-label" id="cd-species-label">Awakenings Incoming</div>
-      <div class="cd-species-names">
-        <span class="cd-sephian-wrap" id="cd-sephian-wrap">
-          <span class="cd-sephian-s">S</span><span class="cd-sephian-rest" id="cd-sephian-rest">ephian</span>
-          <span class="cd-sephian-blur" id="cd-sephian-blur"></span>
-        </span>
-        <span class="cd-species-sep" id="cd-sep">·</span>
-        <span class="cd-species-archdemon" id="cd-archdemon">Archdemon</span>
+      <div class="cd-names-container" id="cd-names-container">
+        <!-- actual text, always rendered, covered by blur overlay -->
+        <div class="cd-names-text">
+          <span class="cd-sephian-s">S</span><span class="cd-sephian-rest">ephian</span>
+          <span class="cd-species-sep"> · </span>
+          <span class="cd-species-archdemon">Archdemon</span>
+        </div>
+        <!-- big blur box covering everything — fades away as timer counts down -->
+        <div class="cd-big-blur" id="cd-big-blur"></div>
       </div>
       <div class="cd-reveal-msg" id="cd-reveal-msg"><span class="rs">Sephian</span> &amp; <span class="ra">Archdemon</span> are here — go play now! ✨</div>
     </div>
@@ -1016,64 +1012,39 @@ function updateSpeciesReveal() {
   const diff  = CD_TARGET - now;
   const total = Math.max(1, CD_TARGET - CD_START);
 
-  const sephianWrap = document.getElementById('cd-sephian-wrap');
-  const blurBox      = document.getElementById('cd-sephian-blur');
-  const sep          = document.getElementById('cd-sep');
-  const archdemon    = document.getElementById('cd-archdemon');
-  const label        = document.getElementById('cd-species-label');
-  const msg          = document.getElementById('cd-reveal-msg');
-  if (!blurBox || !archdemon) return;
+  const bigBlur = document.getElementById('cd-big-blur');
+  const label   = document.getElementById('cd-species-label');
+  const msg     = document.getElementById('cd-reveal-msg');
+  if (!bigBlur) return;
 
   if (diff <= 0) {
-    // Full reveal at zero
-    blurBox.style.opacity          = '0';
-    blurBox.style.backdropFilter   = 'blur(0px)';
-    blurBox.style.webkitBackdropFilter = 'blur(0px)';
-    sephianWrap.style.opacity      = '1';
-    sephianWrap.style.textShadow   = '0 0 40px rgba(220,235,255,0.9),0 0 12px rgba(220,235,255,0.5)';
-    sep.style.opacity              = '1';
-    archdemon.style.opacity        = '1';
-    archdemon.style.filter         = 'blur(0px)';
-    archdemon.style.webkitMaskImage= 'none';
-    archdemon.style.maskImage      = 'none';
-    archdemon.style.textShadow     = '0 0 40px rgba(139,0,0,1),0 0 15px rgba(139,0,0,0.6)';
-    label.style.opacity            = '1';
-    msg.style.display              = 'block';
+    // Fully revealed at zero — remove blur box entirely
+    bigBlur.style.opacity              = '0';
+    bigBlur.style.backdropFilter       = 'blur(0px)';
+    bigBlur.style.webkitBackdropFilter = 'blur(0px)';
+    bigBlur.style.background           = 'transparent';
+    label.style.opacity                = '1';
+    msg.style.display                  = 'block';
     return;
   }
 
   // progress 0 (day 1) -> 1 (at zero)
   const elapsed = now - CD_START;
   const rawProg = Math.max(0, Math.min(1, elapsed / total));
-  // ease-in: very slow start, accelerates near the end
-  const eased   = Math.pow(rawProg, 2.8);
+  // ease-in: extremely slow at start, accelerates hard near the end
+  const eased   = Math.pow(rawProg, 3.0);
 
-  // ── Sephian wrap: always fully visible, "S" always clear ──
-  sephianWrap.style.opacity    = '1';
-  sephianWrap.style.textShadow = `0 0 30px rgba(220,235,255,${(eased*0.7).toFixed(2)})`;
-
-  // ── Blur box over "ephian": opacity 1->0 and blur 8->0 as timer falls ──
+  // Blur box: starts fully opaque (1), slowly fades to 0
   const boxOpacity = Math.max(0, 1 - eased);
-  const boxBlur    = Math.max(0, 8 * (1 - eased));
-  blurBox.style.opacity              = boxOpacity.toFixed(3);
-  blurBox.style.backdropFilter       = `blur(${boxBlur.toFixed(1)}px)`;
-  blurBox.style.webkitBackdropFilter = `blur(${boxBlur.toFixed(1)}px)`;
-  blurBox.style.background           = `rgba(10,15,25,${(boxOpacity*0.55).toFixed(3)})`;
+  const boxBlur    = Math.max(0, 14 * (1 - eased));
+  const boxBg      = Math.max(0, 0.92 * (1 - eased));
 
-  // ── Separator ──
-  sep.style.opacity = (eased * 0.8).toFixed(3);
+  bigBlur.style.opacity              = boxOpacity.toFixed(4);
+  bigBlur.style.backdropFilter       = `blur(${boxBlur.toFixed(1)}px)`;
+  bigBlur.style.webkitBackdropFilter = `blur(${boxBlur.toFixed(1)}px)`;
+  bigBlur.style.background           = `rgba(5,8,16,${boxBg.toFixed(4)})`;
 
-  // ── Archdemon: left-to-right unfade ──
-  const archPct = Math.max(0, Math.min(100, (eased - 0.04) * 120));
-  const ltr = (pct) =>
-    `linear-gradient(to right,black ${Math.max(0,pct-2).toFixed(1)}%,transparent ${Math.min(100,pct+8).toFixed(1)}%)`;
-
-  archdemon.style.opacity         = eased.toFixed(3);
-  archdemon.style.filter          = `blur(${Math.max(0,8*(1-eased)).toFixed(1)}px)`;
-  archdemon.style.webkitMaskImage = ltr(archPct);
-  archdemon.style.maskImage       = ltr(archPct);
-  archdemon.style.textShadow      = `0 0 40px rgba(139,0,0,${(eased*0.9).toFixed(2)}),0 0 15px rgba(139,0,0,${(eased*0.5).toFixed(2)})`;
-
+  // Label fades in as blur fades out
   label.style.opacity = (eased * 0.85).toFixed(3);
 }
 
